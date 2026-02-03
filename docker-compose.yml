@@ -1,0 +1,68 @@
+services:
+  # 1. MQTT Broker
+  mosquitto:
+    image: eclipse-mosquitto
+    container_name: fsae_mosquitto
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    restart: always
+
+  # 2. InfluxDB 1.8
+  influxdb:
+    image: influxdb:1.8
+    container_name: fsae_influxdb
+    ports:
+      - "8086:8086"
+    volumes:
+      - ./influxdb_1.8_data:/var/lib/influxdb
+    environment:
+      - INFLUXDB_DB=fsae_db
+    restart: always
+
+  # 3. Telegraf
+  telegraf:
+    image: telegraf
+    container_name: fsae_telegraf
+    volumes:
+      # 配置文件挂载
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      # Protos 定义文件挂载 (只保留这一行正确的相对路径即可)
+      - ./protos:/etc/telegraf/protos:ro
+    depends_on:
+      - influxdb
+      - mosquitto
+    restart: always
+
+  # 4. Grafana
+  grafana:
+    image: grafana/grafana
+    container_name: fsae_grafana
+    environment:
+      - GF_DASHBOARDS_MIN_REFRESH_INTERVAL=200ms
+      - GF_SERVER_DOMAIN=bitfsae.xin
+      - GF_SERVER_ROOT_URL=https://bitfsae.xin/monitor/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    volumes:
+      - ./grafana_data:/var/lib/grafana
+    restart: always
+
+  # 5. Web (Nginx)
+  web:
+    image: nginx:alpine
+    container_name: fsae_web
+    ports:
+      - "80:80"   # HTTP
+      - "443:443" # HTTPS (新增)
+    volumes:
+      # 挂载网页代码
+      - ./www:/usr/share/nginx/html
+      # 挂载自定义的 Nginx 配置 (覆盖默认配置)
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      # 挂载证书文件
+      - ./nginx/cert:/etc/nginx/cert
+    restart: always

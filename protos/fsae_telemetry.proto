@@ -1,0 +1,68 @@
+syntax = "proto3";
+package fsae;
+message BatteryModule {
+
+    uint32 module_id = 1;
+    // 23 节电芯电压
+    uint32 v01 = 2;
+    uint32 v02 = 3;
+    uint32 v03 = 4;
+    uint32 v04 = 5;
+    uint32 v05 = 6;
+    uint32 v06 = 7;
+    uint32 v07 = 8;
+    uint32 v08 = 9;
+    uint32 v09 = 10;
+    uint32 v10 = 11;
+    uint32 v11 = 12;
+    uint32 v12 = 13;
+    uint32 v13 = 14;
+    uint32 v14 = 15;
+    uint32 v15 = 16;
+    uint32 v16 = 17;
+    uint32 v17 = 18;
+    uint32 v18 = 19;
+    uint32 v19 = 20;
+    uint32 v20 = 21;
+    uint32 v21 = 22;
+    uint32 v22 = 23;
+    uint32 v23 = 24;
+
+    // 8 个温度
+    sint32 t1 = 30;
+    sint32 t2 = 31;
+    sint32 t3 = 32;
+    sint32 t4 = 33;
+    sint32 t5 = 34;
+    sint32 t6 = 35;
+    sint32 t7 = 36;
+    sint32 t8 = 37;
+}
+message TelemetryFrame {
+	// --- 1. 基础信息 ---
+    uint32 timestamp_ms = 1;
+    uint32 frame_id = 2;
+    
+    // --- 2. 驾驶员输入 ---
+    float apps_position = 3;
+    float brake_pressure = 4;
+    float steering_angle = 5;
+
+    // --- 3. 高压系统 ---
+    float hv_voltage = 6;
+    float hv_current = 7;
+    float battery_temp_max = 8;
+    uint32 fault_code = 9;
+
+    // --- 4. 动力系统 ---
+    int32 motor_rpm = 10;
+    float motor_temp = 11;
+    float inverter_temp = 12;
+    
+    // --- 5. 车辆状态 (改为整数：0=Off, 1=On) ---
+    uint32 ready_to_drive = 13;
+    uint32 vcu_status = 14;
+    
+    // --- 6. BMS 详细数据
+    repeated BatteryModule modules = 15;
+}

@@ -1,0 +1,7 @@
+influxdb_1.8_data/
+grafana_data/
+mosquitto/data/
+mosquitto/log/
+*_data/
+*.log
+.DS_Store
