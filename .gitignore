@@ -5,3 +5,5 @@ mosquitto/log/
 *_data/
 *.log
 .DS_Store
+nginx_docker_old/
+www_old_backup/
