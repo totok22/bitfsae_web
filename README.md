@@ -1,6 +1,12 @@
-# BITFSAE 运维仓库
+# BITFSAE 线上遥测与部署仓库
 
-本仓库用于维护 BITFSAE 线上遥测系统相关配置与数据目录。
+本仓库用于维护 BITFSAE 线上环境相关的遥测链路、监控服务、证书续签脚本、服务器部署说明，以及 protobuf 协议与常用运维配置。
+
+相关 Web/Nuxt 项目仓库：
+
+- 公开仓库：`https://github.com/totok22/BITFSAE-team-portal`
+- 车队自用仓库：`https://github.com/totok22/bitfsae-nuxt`
+- 两个仓库当前代码保持一致
 
 ## 架构
 
@@ -12,26 +18,18 @@
    - `telegraf`
    - `grafana`（映射 `127.0.0.1:3001->3000`）
 - Nginx 通过 `/monitor/` 反代到 Grafana。
+- Web 运行目录位于服务器本地 `/opt/bitfsae`，不在本仓库内。
 
 ## 仓库目录说明
 
 - `docker-compose.yml`: 遥测/监控容器编排（不包含现网 Web 容器）。
-- `mosquitto/`, `telegraf/`, `protos/`: 数据采集链路配置。
+- `mosquitto/`, `telegraf/`, `protos/`: MQTT 接入、Telegraf 解析与 protobuf 协议定义等数据链路配置。
 - `scripts/ssl_auto_renew.sh`: Let's Encrypt 自动申请/续签脚本（当前已适配宿主机 Nginx）。
+- `DEPLOYMENT (server).md`: 当前线上架构对应的新服务器部署与域名迁移手册。
 
 ## 新服务器部署
 
-如果要把系统迁到一台全新服务器，或更换到新的域名后缀，例如 `.site`，请直接参考 `DEPLOYMENT (in practice).md`。
-
-该文档已经补充：
-
-- Ubuntu 22.04 新机初始化命令
-- 2C2G 机器的 swap 配置
-- Docker、Node.js、PM2、Nginx 安装
-- Let's Encrypt 首签与自动续签
-- EdgeOne 接入建议
-- Nuxt 网站 GitHub CI/CD 迁移时需要同步检查的点
-- 公开仓库下的密钥隔离要求
+如果要把系统迁到一台全新服务器，或更换到新的域名后缀，例如 `.site`，请参考 `DEPLOYMENT (server).md`。
 
 ## 日常运维命令
 
@@ -73,13 +71,13 @@ systemctl status nginx --no-pager
 sudo LETSENCRYPT_EMAIL=ops@bitfsae.xin /home/admin/fsae_project/scripts/ssl_auto_renew.sh
 ```
 
-### 定时任务（已配置）
+### 定时任务
 
 - 文件：`/etc/cron.d/bitfsae-ssl-renew`
 - 计划：每天 `03:17`
 - 日志：`/var/log/bitfsae-ssl-renew.log`
 
-## Nginx 关键配置（现网）
+## Nginx 关键配置
 
 现网虚拟主机在 `/etc/nginx/sites-available/bitfsae`，HTTP/HTTPS 两个 server 块都已放行 ACME 挑战路径：
 
