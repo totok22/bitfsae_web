@@ -2,9 +2,7 @@
 
 本仓库用于维护 BITFSAE 线上遥测系统相关配置与数据目录。
 
-当前线上实际部署不是全 Docker 化 Web，而是以下混合架构。
-
-## 线上实际架构（已核实）
+## 架构
 
 - 宿主机 `nginx` 负责 `80/443` 入口与 TLS。
 - 宿主机 `pm2` 运行站点服务（`bitfsae`，监听 `127.0.0.1:3000`）。
@@ -15,15 +13,11 @@
    - `grafana`（映射 `127.0.0.1:3001->3000`）
 - Nginx 通过 `/monitor/` 反代到 Grafana。
 
-补充说明：当前仓库不包含现网 Web 站点源码，也没有 `package.json`。现网 Web 进程由宿主机 `pm2` 托管，但其源码仓库或发布产物不在本仓库中。
-
 ## 仓库目录说明
 
 - `docker-compose.yml`: 遥测/监控容器编排（不包含现网 Web 容器）。
 - `mosquitto/`, `telegraf/`, `protos/`: 数据采集链路配置。
 - `scripts/ssl_auto_renew.sh`: Let's Encrypt 自动申请/续签脚本（当前已适配宿主机 Nginx）。
-- `nginx_docker_old/`: 历史遗留目录，已在 `.gitignore` 中忽略，不是当前生效配置。
-- `www_old_backup/`: 旧前端静态备份目录，已忽略。
 
 ## 新服务器部署
 
@@ -99,7 +93,6 @@ location ^~ /.well-known/acme-challenge/ {
 
 ## 注意事项
 
-- 不要再把 `nginx_docker_old/` 当作现网配置来源。
 - 若改动了 `/etc/nginx/sites-available/bitfsae`，务必先执行 `nginx -t` 再 reload。
 - 本仓库中 `*_data/` 目录是运行数据，默认被 `.gitignore` 忽略，建议定期做离机备份。
 - 当前仓库是公开仓库，不要提交真实证书、私钥、服务器 `.env`、数据库导出或任何第三方平台密钥。

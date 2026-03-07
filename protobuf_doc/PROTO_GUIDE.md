@@ -53,16 +53,12 @@
 fsae.TelemetryFrame.modules    max_count:6
 ```
 
-如果你把 `modules` 的最大数量从 6 改成更大值，必须同步更新 `protos/fsae_telemetry.options`，否则 STM32 侧生成的数组长度仍然是旧值。
-
 ## 3. 服务器侧的真实解析方式
 
 当前服务器不是只解析一个 topic，而是两条独立链路：
 
 - `fsae/telemetry`：基础遥测字段
 - `fsae/bms`：从同一个 `TelemetryFrame` 里提取 `modules`
-
-这件事很重要，因为新增字段后该改哪一段配置，取决于字段在哪个 topic 发送。
 
 ### 3.1 基础遥测 topic
 

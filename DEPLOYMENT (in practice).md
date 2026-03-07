@@ -7,17 +7,13 @@
 - 在新服务器上重建当前线上环境
 - 把域名从旧值迁到新值，例如从 `bitfsae.xin` 迁到 `bitfsae.site`
 
-## 1. 先确认当前线上架构
-
-当前线上不是“全 Docker 部署”，而是下面这套混合架构：
+## 1. 当前线上架构
 
 - 宿主机 `nginx` 负责 `80/443` 和 TLS
 - 宿主机 `pm2` 负责 Web 进程 `bitfsae`，监听 `127.0.0.1:3000`
 - `docker compose` 只运行这 4 个容器：`mosquitto`、`influxdb`、`telegraf`、`grafana`
 - Grafana 只监听宿主机回环地址：`127.0.0.1:3001`
 - Nginx 通过 `/monitor/` 反代 Grafana
-
-这几个事实不要搞错：
 
 - 本仓库不包含现网 Web 源码，也没有 `package.json`
 - 当前仓库中的 `docker-compose.yml` 不负责 Web 站点
@@ -116,8 +112,6 @@ docker compose version
 
 ### 3.4 安装 Node 22 和 PM2
 
-现网 Node 版本是 22 系列，新机直接对齐。
-
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs
@@ -215,8 +209,6 @@ sudo chmod 600 /opt/bitfsae/.env
 
 ## 7. 复制 Web 运行产物并启动 PM2
 
-这一步是很多人最容易漏掉的地方。本仓库没有 Web 运行产物，必须额外准备：
-
 - `/opt/bitfsae/.output/`
 - `/opt/bitfsae/ecosystem.config.cjs`
 
@@ -274,14 +266,6 @@ curl -I http://127.0.0.1:3000
 ```
 
 ## 8. 写宿主机 Nginx 配置
-
-`/etc/nginx/sites-available/bitfsae` 这个路径是当前机器真实存在的现网站点文件路径。
-
-下面这段配置不是把当前线上文件逐字贴出来，而是按当前现网结构整理后的迁移模板：
-
-- upstream、`/.well-known/acme-challenge/`、`/monitor/` 反代结构与现网一致
-- 文档里把域名和证书文件名改成了迁移目标值，例如 `bitfsae.site`
-- 当前线上真实文件仍是旧域名对应值，例如 `bitfsae.xin`
 
 迁移时，按这个模板写入 `/etc/nginx/sites-available/bitfsae`：
 
@@ -387,8 +371,6 @@ dig +short www.bitfsae.site AAAA
 ```
 
 ## 10. 补充：EdgeOne 和 GitHub CI/CD
-
-这两个在当前部署里会用到，但这里只需要记住和迁移直接相关的点：
 
 - 如果域名接入腾讯云 EdgeOne，先确保源站 Nginx、证书和回源都正常，再开启代理、缓存或规则；`/.well-known/acme-challenge/` 不要被缓存、改写或拦截
 - Nuxt 网站如果通过 GitHub CI/CD 部署，迁移域名时要同步检查构建环境变量、部署目标机器、回调地址和 `NUXT_PUBLIC_SITE_URL`，避免 CI 仍把产物发到旧环境或带着旧域名配置
