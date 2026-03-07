@@ -31,11 +31,12 @@
 
 该文档已经补充：
 
-- Ubuntu 20.04 新机初始化命令
+- Ubuntu 22.04 新机初始化命令
 - 2C2G 机器的 swap 配置
 - Docker、Node.js、PM2、Nginx 安装
 - Let's Encrypt 首签与自动续签
 - EdgeOne 接入建议
+- Nuxt 网站 GitHub CI/CD 迁移时需要同步检查的点
 - 公开仓库下的密钥隔离要求
 
 ## 日常运维命令

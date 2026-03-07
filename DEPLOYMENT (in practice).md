@@ -54,7 +54,7 @@ ACME_WEBROOT=/var/www/certbot
 
 ## 3. 新服务器初始化
 
-以下命令按 Ubuntu 20.04 新机整理。
+以下命令按 Ubuntu 22.04 新机整理。
 
 ### 3.1 安装基础依赖
 
@@ -275,7 +275,15 @@ curl -I http://127.0.0.1:3000
 
 ## 8. 写宿主机 Nginx 配置
 
-写入 `/etc/nginx/sites-available/bitfsae`：
+`/etc/nginx/sites-available/bitfsae` 这个路径是当前机器真实存在的现网站点文件路径。
+
+下面这段配置不是把当前线上文件逐字贴出来，而是按当前现网结构整理后的迁移模板：
+
+- upstream、`/.well-known/acme-challenge/`、`/monitor/` 反代结构与现网一致
+- 文档里把域名和证书文件名改成了迁移目标值，例如 `bitfsae.site`
+- 当前线上真实文件仍是旧域名对应值，例如 `bitfsae.xin`
+
+迁移时，按这个模板写入 `/etc/nginx/sites-available/bitfsae`：
 
 ```nginx
 upstream nuxt_app {
@@ -378,7 +386,14 @@ dig +short bitfsae.site AAAA
 dig +short www.bitfsae.site AAAA
 ```
 
-## 10. 首次申请证书
+## 10. 补充：EdgeOne 和 GitHub CI/CD
+
+这两个在当前部署里会用到，但这里只需要记住和迁移直接相关的点：
+
+- 如果域名接入腾讯云 EdgeOne，先确保源站 Nginx、证书和回源都正常，再开启代理、缓存或规则；`/.well-known/acme-challenge/` 不要被缓存、改写或拦截
+- Nuxt 网站如果通过 GitHub CI/CD 部署，迁移域名时要同步检查构建环境变量、部署目标机器、回调地址和 `NUXT_PUBLIC_SITE_URL`，避免 CI 仍把产物发到旧环境或带着旧域名配置
+
+## 11. 首次申请证书
 
 本仓库已经有脚本：`/home/admin/fsae_project/scripts/ssl_auto_renew.sh`
 
@@ -402,7 +417,7 @@ sudo /bin/bash -lc 'set -a; . /opt/bitfsae/.env; set +a; /home/admin/fsae_projec
 sudo openssl x509 -in /etc/nginx/ssl/bitfsae.site.pem -noout -issuer -subject -dates
 ```
 
-## 11. 安装自动续签 cron
+## 12. 安装自动续签 cron
 
 ```bash
 cat <<'EOF' | sudo tee /etc/cron.d/bitfsae-ssl-renew >/dev/null
@@ -420,7 +435,7 @@ sudo chmod 644 /etc/cron.d/bitfsae-ssl-renew
 sudo /bin/bash -lc 'set -a; . /opt/bitfsae/.env; set +a; /home/admin/fsae_project/scripts/ssl_auto_renew.sh'
 ```
 
-## 12. 如需迁移旧数据
+## 13. 如需迁移旧数据
 
 先停容器，再打包旧数据目录：
 
@@ -437,7 +452,7 @@ docker compose up -d
 docker compose ps
 ```
 
-## 13. 切流前验收
+## 14. 切流前验收
 
 正式切换前至少执行一次：
 
@@ -459,7 +474,7 @@ sudo openssl x509 -in /etc/nginx/ssl/bitfsae.site.pem -noout -issuer -subject -d
 - `docker compose ps` 中 4 个容器都为 `Up`
 - 证书域名和到期时间正确
 
-## 14. 迁移时最容易漏的点
+## 15. 迁移时最容易漏的点
 
 只检查下面这几项，基本就够了：
 
@@ -469,8 +484,9 @@ sudo openssl x509 -in /etc/nginx/ssl/bitfsae.site.pem -noout -issuer -subject -d
 4. Nginx 的 `server_name` 和证书文件名是否改了。
 5. `AAAA` 记录是不是还留着旧地址。
 6. OAuth、Webhook、CDN、DNS 白名单里是否还有旧域名。
+7. EdgeOne 和 GitHub CI/CD 里是否还保留旧域名或旧部署目标。
 
-## 15. 和仓库隔离的敏感文件
+## 16. 和仓库隔离的敏感文件
 
 当前仓库是公开仓库，下面这些内容不要提交：
 
@@ -488,7 +504,7 @@ git status --ignored
 find . -maxdepth 3 \( -name '*.pem' -o -name '*.key' -o -name '.env' -o -name '*.sql' -o -name '*.tar.gz' \)
 ```
 
-## 16. 当前仓库里的历史目录
+## 17. 当前仓库里的历史目录
 
 - `nginx_docker_old/` 是旧方案残留，不是当前现网配置
 - `www_old_backup/` 是旧静态站备份，不参与当前线上服务
