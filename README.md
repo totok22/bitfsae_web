@@ -15,6 +15,8 @@
    - `grafana`（映射 `127.0.0.1:3001->3000`）
 - Nginx 通过 `/monitor/` 反代到 Grafana。
 
+补充说明：当前仓库不包含现网 Web 站点源码，也没有 `package.json`。现网 Web 进程由宿主机 `pm2` 托管，但其源码仓库或发布产物不在本仓库中。
+
 ## 仓库目录说明
 
 - `docker-compose.yml`: 遥测/监控容器编排（不包含现网 Web 容器）。
@@ -22,6 +24,19 @@
 - `scripts/ssl_auto_renew.sh`: Let's Encrypt 自动申请/续签脚本（当前已适配宿主机 Nginx）。
 - `nginx_docker_old/`: 历史遗留目录，已在 `.gitignore` 中忽略，不是当前生效配置。
 - `www_old_backup/`: 旧前端静态备份目录，已忽略。
+
+## 新服务器部署
+
+如果要把系统迁到一台全新服务器，或更换到新的域名后缀，例如 `.site`，请直接参考 `DEPLOYMENT (in practice).md`。
+
+该文档已经补充：
+
+- Ubuntu 20.04 新机初始化命令
+- 2C2G 机器的 swap 配置
+- Docker、Node.js、PM2、Nginx 安装
+- Let's Encrypt 首签与自动续签
+- EdgeOne 接入建议
+- 公开仓库下的密钥隔离要求
 
 ## 日常运维命令
 
@@ -86,3 +101,4 @@ location ^~ /.well-known/acme-challenge/ {
 - 不要再把 `nginx_docker_old/` 当作现网配置来源。
 - 若改动了 `/etc/nginx/sites-available/bitfsae`，务必先执行 `nginx -t` 再 reload。
 - 本仓库中 `*_data/` 目录是运行数据，默认被 `.gitignore` 忽略，建议定期做离机备份。
+- 当前仓库是公开仓库，不要提交真实证书、私钥、服务器 `.env`、数据库导出或任何第三方平台密钥。
