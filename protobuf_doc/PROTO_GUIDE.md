@@ -1,6 +1,6 @@
 # Protobuf 协议维护指南
 
-本项目的通信核心定义在 `D:\Protobuf\server_config\protos` 目录下的 `.proto` 文件中。
+本项目的通信核心定义在仓库内 `protos/` 目录下的 `.proto` 文件中。
 为了保证服务器端（Telegraf -> InfluxDB）的数据解析正常，**请严格遵守以下规范进行修改**。
 
 ## 1. 核心文件
@@ -76,10 +76,10 @@ fsae.TelemetryFrame.modules    max_count:6
 2.  **生成代码**:
     *   **Python (本地模拟)**: 运行 `protoc --python_out=. fsae_telemetry.proto`
     *   **STM32 (车载)**: 运行 Nanopb 生成器，更新 STM32 工程中的 `.c/.h` 文件。
-3.  **修改服务器配置 (重要)**:
-    *   登录服务器，编辑 `server_config/telegraf/telegraf.conf`。
+2.  **修改服务器配置 (重要)**:
+    *   登录服务器，编辑当前仓库中的 `telegraf/telegraf.conf`。
     *   在 `[[inputs.mqtt_consumer.xpath.fields]]` 下添加：
         ```toml
         tire_pressure_fl = "number(//tire_pressure_fl)"
         ```
-    *   重启 Telegraf: `docker-compose restart telegraf`
+    *   重启 Telegraf: `docker compose restart telegraf`

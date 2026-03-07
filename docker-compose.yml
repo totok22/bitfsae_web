@@ -53,18 +53,4 @@ services:
       - ./grafana_data:/var/lib/grafana
     restart: always
 
-  # 5. Web (Nginx)
-  # web:
-  #   image: nginx:alpine
-  #   container_name: fsae_web
-  #   ports:
-  #     - "80:80"   # HTTP
-  #     - "443:443" # HTTPS (新增)
-  #   volumes:
-  #     # 挂载网页代码
-  #     - ./www:/usr/share/nginx/html
-  #     # 挂载自定义的 Nginx 配置 (覆盖默认配置)
-  #     - ./nginx/conf.d:/etc/nginx/conf.d
-  #     # 挂载证书文件
-  #     - ./nginx/cert:/etc/nginx/cert
-  #   restart: always
+  # Current production Web is hosted by host nginx + PM2, not by a compose service.

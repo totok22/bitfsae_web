@@ -6,7 +6,7 @@
 
 ## 1. 文件位置
 
-你需要关注的文件在 Git 仓库的 `server_config/protos` 目录下：
+你需要关注的文件在当前仓库的 `protos/` 目录下：
 *   `fsae_telemetry.proto`: 数据定义
 *   `fsae_telemetry.options`: Nanopb 配置文件（定义了数组最大长度等）
 
