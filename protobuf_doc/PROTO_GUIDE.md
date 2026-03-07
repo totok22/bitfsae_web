@@ -1,85 +1,190 @@
 # Protobuf 协议维护指南
 
-本项目的通信核心定义在仓库内 `protos/` 目录下的 `.proto` 文件中。
-为了保证服务器端（Telegraf -> InfluxDB）的数据解析正常，**请严格遵守以下规范进行修改**。
+本项目的协议定义在仓库根目录的 `protos/` 下。只要改了 `.proto`，就要同时考虑三端是否需要同步：
+
+1. Python 本地模拟脚本
+2. STM32 车载发送端（Nanopb 生成代码）
+3. 服务器侧 Telegraf 的 Protobuf 映射
 
 ## 1. 核心文件
 
-*   `fsae_telemetry.proto`: 定义数据结构（Message）。
-*   `fsae_telemetry.options`: 定义 Nanopb（STM32使用）的特定选项，如数组最大长度。
+- `protos/fsae_telemetry.proto`：协议结构定义
+- `protos/fsae_telemetry.options`：Nanopb 选项，目前只约束 `modules` 的最大数量
+- `telegraf/telegraf.conf`：服务器侧字段提取规则
+- `protobuf_doc/local_sim2.py`：本地模拟发送脚本
 
-## 2. 修改规范 (CRITICAL)
+## 2. 修改规则
 
-服务器端的 Telegraf 配置文件 (`telegraf.conf`) 使用了 XPath 来提取 Protobuf 数据。这意味着：
+### 2.1 不要改已有字段的编号
 
-1.  **禁止修改现有字段的名称和类型**：
-    *   例如：`uint32 module_id = 1;` 中的 `module_id` 被写入在 `telegraf.conf` 中。如果你把它改名为 `id`，服务器将无法解析该字段，数据会丢失。
-    *   如果必须修改，你**必须**同步修改服务器上 `telegraf.conf` 中的 `xpath` 映射，并重启 Telegraf 容器。
+像 `timestamp_ms = 1`、`modules = 15` 这种字段编号一旦投入使用，就不要再改。
 
-2.  **禁止修改现有字段的 ID**：
-    *   Protobuf 依赖 ID (`= 1`, `= 2`) 来序列化。修改 ID 会导致新旧版本不兼容。
+原因：Protobuf 编解码依赖字段编号，不依赖字段顺序。改编号会直接破坏新旧兼容。
 
-3.  **新增字段**：
-    *   可以直接在 Message 末尾添加新字段，使用新的 ID。
-    *   例如：`float tire_pressure = 40;`
-    *   **注意**：新增字段后，如果能在服务器数据库看到它，还需要手动修改服务器的 `telegraf.conf`，添加对应的 XML Path 映射。否则服务器只会忽略这个新数据，虽然不会报错。
+### 2.2 不要随意改已有字段名或类型
 
-4.  **数组长度控制**：
-    *   如果有 `repeated` 字段，必须在 `fsae_telemetry.options` 中指定 `max_count`。这是为了让 STM32 (C语言) 能够静态分配内存。
+当前服务器使用 `telegraf/telegraf.conf` 里的 `xpath_protobuf` 配置按字段名取值。
 
-## 3. 现有结构参考
+这意味着：
 
-**fsae_telemetry.proto:**
+- 改字段名，Telegraf 的 XPath 映射就会失效
+- 改字段类型，Telegraf 对应的 `fields` 或 `fields_int` 也可能要一起改
 
-```protobuf
-syntax = "proto3";
-package fsae;
+例如：
 
-message BatteryModule {
-    uint32 module_id = 1;
-    // 23 节电芯电压
-    uint32 v01 = 2;
-    ...
-    // 8 个温度
-    sint32 t1 = 30;
-    ...
-}
+- `motor_rpm` 目前在 `fields_int` 中提取
+- `hv_voltage` 目前在 `fields` 中通过 `number(...)` 提取
 
-message TelemetryFrame {
-    // 基础信息
-    uint32 timestamp_ms = 1;
-    uint32 frame_id = 2;
-    
-    // 驾驶员输入
-    float apps_position = 3;
-    ...
-    
-    // BMS 详细数据
-    repeated BatteryModule modules = 15;
-}
-```
+如果必须改名或改类型，必须同步修改 `telegraf/telegraf.conf`，然后重启 Telegraf 容器。
 
-**fsae_telemetry.options (Nanopb):**
+### 2.3 新增字段只能追加，不能复用旧编号
 
-```plaintext
+新增字段时：
+
+- 在对应 message 末尾追加
+- 使用从未使用过的新编号
+- 不要占用保留给旧字段的编号
+
+### 2.4 `repeated` 字段要同步更新 `.options`
+
+当前协议里：
+
+```text
 fsae.TelemetryFrame.modules    max_count:6
 ```
 
-## 4. 常见操作流程
+如果你把 `modules` 的最大数量从 6 改成更大值，必须同步更新 `protos/fsae_telemetry.options`，否则 STM32 侧生成的数组长度仍然是旧值。
 
-### 场景：我想加一个“胎压”数据
+## 3. 服务器侧的真实解析方式
 
-1.  **修改 Proto**: 在 `fsae_telemetry.proto` 的 `TelemetryFrame` 中添加：
-    ```protobuf
-    float tire_pressure_fl = 20; // Front Left
-    ```
-2.  **生成代码**:
-    *   **Python (本地模拟)**: 运行 `protoc --python_out=. fsae_telemetry.proto`
-    *   **STM32 (车载)**: 运行 Nanopb 生成器，更新 STM32 工程中的 `.c/.h` 文件。
-2.  **修改服务器配置 (重要)**:
-    *   登录服务器，编辑当前仓库中的 `telegraf/telegraf.conf`。
-    *   在 `[[inputs.mqtt_consumer.xpath.fields]]` 下添加：
-        ```toml
-        tire_pressure_fl = "number(//tire_pressure_fl)"
-        ```
-    *   重启 Telegraf: `docker compose restart telegraf`
+当前服务器不是只解析一个 topic，而是两条独立链路：
+
+- `fsae/telemetry`：基础遥测字段
+- `fsae/bms`：从同一个 `TelemetryFrame` 里提取 `modules`
+
+这件事很重要，因为新增字段后该改哪一段配置，取决于字段在哪个 topic 发送。
+
+### 3.1 基础遥测 topic
+
+Topic：`fsae/telemetry`
+
+主要映射位置：
+
+- `[[inputs.mqtt_consumer]]` 第一段
+- `[inputs.mqtt_consumer.xpath.fields_int]`
+- `[inputs.mqtt_consumer.xpath.fields]`
+
+适用于这些字段：
+
+- `timestamp_ms`
+- `frame_id`
+- `apps_position`
+- `brake_pressure`
+- `steering_angle`
+- `hv_voltage`
+- `hv_current`
+- `battery_temp_max`
+- `fault_code`
+- `motor_rpm`
+- `motor_temp`
+- `inverter_temp`
+- `ready_to_drive`
+- `vcu_status`
+
+### 3.2 BMS topic
+
+Topic：`fsae/bms`
+
+主要映射位置：
+
+- `[[inputs.mqtt_consumer]]` 第二段
+- `metric_selection = "//modules"`
+- `[inputs.mqtt_consumer.xpath.tags]`
+- `[inputs.mqtt_consumer.xpath.fields_int]`
+
+这里当前提取的是每个 `BatteryModule` 的：
+
+- `module_id`
+- `v01` 到 `v23`
+- `t1` 到 `t8`
+
+因此：
+
+- 如果你给 `TelemetryFrame` 新增基础字段，改第一段映射
+- 如果你给 `BatteryModule` 新增字段，改第二段映射
+
+## 4. 推荐操作流程
+
+### 场景：给 `TelemetryFrame` 新增一个基础字段
+
+例如新增：
+
+```protobuf
+float tire_pressure_fl = 16;
+```
+
+建议顺序：
+
+1. 修改 `protos/fsae_telemetry.proto`
+2. 重新生成 Python 用的 `fsae_telemetry_pb2.py`
+3. 重新生成 STM32 的 `.pb.c/.pb.h`
+4. 修改 `telegraf/telegraf.conf` 第一段映射
+5. 重启 Telegraf：`docker compose restart telegraf`
+
+Telegraf 中应补一行：
+
+```toml
+tire_pressure_fl = "number(//tire_pressure_fl)"
+```
+
+### 场景：给 `BatteryModule` 新增一个字段
+
+例如新增：
+
+```protobuf
+uint32 balance_state = 38;
+```
+
+建议顺序：
+
+1. 修改 `protos/fsae_telemetry.proto`
+2. 如果 STM32 会发送这个字段，重新生成 Nanopb 代码
+3. 如果本地模拟脚本也要发这个字段，重新生成 Python 文件并更新脚本赋值逻辑
+4. 修改 `telegraf/telegraf.conf` 第二段 BMS 映射
+5. 重启 Telegraf
+
+例如新增整数字段时，可在第二段里增加：
+
+```toml
+balance_state = "balance_state"
+```
+
+## 5. 生成命令
+
+### 5.1 Python 本地模拟
+
+在 `protobuf_doc/` 目录下运行：
+
+```bash
+protoc --proto_path=../protos --python_out=. ../protos/fsae_telemetry.proto
+```
+
+执行后，`protobuf_doc/` 下应出现或更新：
+
+- `fsae_telemetry_pb2.py`
+
+### 5.2 STM32 / Nanopb
+
+在 `protos/` 目录下运行 Nanopb 生成器，确保它能同时读取：
+
+- `fsae_telemetry.proto`
+- 同目录下的 `fsae_telemetry.options`
+
+## 6. 修改完成后的最小检查项
+
+每次改完协议，至少检查这四件事：
+
+1. 新字段编号是否唯一
+2. 本地模拟或 STM32 是否真的开始发送这个字段
+3. `telegraf/telegraf.conf` 是否已补映射
+4. `docker compose restart telegraf` 后 InfluxDB 是否出现新字段

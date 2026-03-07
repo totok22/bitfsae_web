@@ -1,101 +1,148 @@
 # STM32 车载发送端开发指南
 
-负责这一部分的同学，请仔细阅读。
+STM32 侧使用的是 Nanopb，而不是标准 Protobuf 全量运行时。协议更新以后，STM32 端必须重新生成 `.pb.c/.pb.h`，不能只改 `.proto` 就结束。
 
-我们的遥测系统使用 **Google Protobuf** 协议对数据进行序列化，但在单片机（STM32）上，我们使用 **Nanopb** 这个轻量级库。
+## 1. 你需要关注的文件
 
-## 1. 文件位置
+仓库中和 STM32 生成直接相关的文件只有两个：
 
-你需要关注的文件在当前仓库的 `protos/` 目录下：
-*   `fsae_telemetry.proto`: 数据定义
-*   `fsae_telemetry.options`: Nanopb 配置文件（定义了数组最大长度等）
+- `protos/fsae_telemetry.proto`
+- `protos/fsae_telemetry.options`
 
-## 2. 如何生成 STM32 代码
+其中：
 
-你需要使用 Nanopb 提供的生成器脚本，将上述两个文件转换为 C 代码 (`.c` 和 `.h`)。
+- `.proto` 定义字段和 message 结构
+- `.options` 控制 Nanopb 的静态内存分配方式
 
-### 准备环境
-确保你下载了 [Nanopb](https://jpa.kapsi.fi/nanopb/) (通常是 `nanopb-0.x.x-windows.zip`)，解压后将其 `generator-bin` 目录加入 PATH，或者直接调用其中的 `nanopb_generator`。
+当前已配置的关键项是：
 
-### 生成命令
-在 `protos` 目录下运行命令行：
+```text
+fsae.TelemetryFrame.modules    max_count:6
+```
+
+这表示生成后的 C 结构体会为 `modules` 预留 6 个元素的空间。
+
+## 2. 生成代码时的关键点
+
+Nanopb 生成器必须在能同时看到这两个文件的目录下执行，最稳妥的方式就是直接进入 `protos/` 目录再生成。
+
+推荐做法：
 
 ```bash
-# 假设你已经安装了 nanopb_generator
+cd protos
 nanopb_generator fsae_telemetry.proto
 ```
 
-或者使用 Python 运行（如果你有 Python 环境和 protobuf 库）：
+如果你使用 Python 方式调用，也建议在 `protos/` 目录内执行：
 
 ```bash
+cd protos
 python path/to/nanopb/generator/nanopb_generator.py fsae_telemetry.proto
 ```
 
-### 产物
-执行成功后，你会得到：
-*   `fsae_telemetry.pb.c`
-*   `fsae_telemetry.pb.h`
+这样生成器会自动读取同目录下的 `fsae_telemetry.options`。
 
-**请将这两个文件复制到你的 STM32 工程中，替换旧文件。**
+## 3. 生成产物
 
-## 3. 工程依赖
+执行成功后，会得到：
 
-除了上述生成的两个文件，你的 STM32 工程还需要 Nanopb 的核心库文件（这些文件一般不需要更新，除非升级 Nanopb 版本）：
-*   `pb.h`
-*   `pb_common.c`
-*   `pb_common.h`
-*   `pb_encode.c`
-*   `pb_encode.h`
-*   `pb_decode.c` (如果车上也需要接收指令，则需要这个；如果只发送，可以不需要)
-*   `pb_decode.h`
+- `fsae_telemetry.pb.c`
+- `fsae_telemetry.pb.h`
 
-## 4. 编程注意事项 (Critical)
+把这两个文件复制进 STM32 工程，替换旧版本。
 
-1.  **数组长度**:
-    在 `.proto` 中定义的 `repeated` 字段（如 `modules`），在 C 语言中会被生成为结构体数组。
-    Nanopb 会使用 `.options` 文件中的 `max_count` 来静态分配内存。
-    *   例如：`fsae.TelemetryFrame.modules max_count:6`
-    *   代码中必须设置 `frame.modules_count` 来告诉编码器实际有多少个有效数据。
-    ```c
-    TelemetryFrame frame = TelemetryFrame_init_zero;
-    frame.modules_count = 6; // 必须设置！不能超过 6
-    ```
+不要手改这两个生成文件。下一次协议更新重新生成即可。
 
-2.  **字符串**:
-    如果有 string 类型，Nanopb 也会生成 `char array[SIZE]`。同样需要在 `.options` 中指定 `max_size`。目前我们的定义里似乎没有 string，主要是数值。
+## 4. STM32 工程还需要哪些 Nanopb 文件
 
-3.  **不要手动修改生成的 .c/.h**:
-    每次 `.proto` 更新，都应该重新生成，而不是手动去改 C 代码，否则下次更新会被覆盖。
+除了上面的协议生成文件，工程里还应包含 Nanopb 核心库：
 
-## 5. 示例代码片段
+- `pb.h`
+- `pb_common.c`
+- `pb_common.h`
+- `pb_encode.c`
+- `pb_encode.h`
+- `pb_decode.c`
+- `pb_decode.h`
+
+如果车端只负责发送，通常实际编码路径只依赖 `pb_encode.*` 和 `pb_common.*`，但很多工程会把整套文件一起保留，便于后续扩展。
+
+## 5. 当前协议下最容易踩的坑
+
+### 5.1 `repeated` 字段要设置 `_count`
+
+`TelemetryFrame.modules` 是 `repeated BatteryModule`，Nanopb 会生成数组和计数字段。
+
+这意味着编码前必须设置：
+
+```c
+TelemetryFrame frame = TelemetryFrame_init_zero;
+frame.modules_count = 6;
+```
+
+如果不设置 `modules_count`，即使你给数组元素赋了值，编码结果里也不会带上这些模块数据。
+
+### 5.2 `modules_count` 不能超过 `.options` 里的上限
+
+当前上限是 6，所以：
+
+```c
+frame.modules_count <= 6
+```
+
+如果以后电池模组数增加，必须先改：
+
+1. `protos/fsae_telemetry.options`
+2. 重新生成 `.pb.c/.pb.h`
+3. 再修改 STM32 发送代码
+
+### 5.3 改了 `.proto` 后不要继续沿用旧头文件
+
+这是最常见问题之一。`.proto` 已更新，但 STM32 工程里还在用旧的 `fsae_telemetry.pb.h`，结果表现为：
+
+- 编译阶段字段不存在
+- 或者编码结构和服务器预期不一致
+
+## 6. 发送主题约定
+
+当前服务器按两个 MQTT topic 解析数据：
+
+- `fsae/telemetry`：基础遥测
+- `fsae/bms`：BMS 模组数据
+
+如果 STM32 未来也要像本地模拟脚本一样拆成两路发送，需要确保：
+
+- 基础字段发送到 `fsae/telemetry`
+- `modules` 数据发送到 `fsae/bms`
+
+否则服务器虽然能收到 MQTT，但现有 Telegraf 配置未必会按预期入库。
+
+## 7. 示例代码
 
 ```c
 #include "pb_encode.h"
 #include "fsae_telemetry.pb.h"
 
-void send_telemetry() {
+void send_telemetry(void)
+{
     uint8_t buffer[512];
     TelemetryFrame message = TelemetryFrame_init_zero;
 
-    // 1. 填充数据
     message.timestamp_ms = HAL_GetTick();
     message.frame_id = frame_counter++;
-    message.apps_position = get_apps_pedal(); // float
-    message.motor_rpm = get_motor_rpm();      // int32
-    
-    // ... 填充其他 ...
+    message.apps_position = get_apps_pedal();
+    message.motor_rpm = get_motor_rpm();
 
-    // 2. 序列化
     pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
-    bool status = pb_encode(&stream, TelemetryFrame_fields, &message);
+    bool ok = pb_encode(&stream, TelemetryFrame_fields, &message);
 
-    if (!status) {
-        // encoding failed
+    if (!ok) {
         printf("Encoding failed: %s\n", PB_GET_ERROR(&stream));
         return;
     }
 
-    // 3. 发送 (buffer, stream.bytes_written)
     mqtt_publish("fsae/telemetry", buffer, stream.bytes_written);
 }
 ```
+
+如果要发送 BMS 数据，同样是编码 `TelemetryFrame`，但要填充 `modules` 和 `modules_count`，然后发布到 `fsae/bms`。
