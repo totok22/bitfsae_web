@@ -5,7 +5,7 @@
 适用场景：
 
 - 在新服务器上重建当前线上环境
-- 把域名从旧值迁到新值，例如从 `bitfsae.xin` 迁到 `bitfsae.site`
+- 把域名从旧值迁到新值，例如从 `bitfsae.xin` 迁到 `bitfsae.com`
 
 ## 1. 当前线上架构
 
@@ -27,8 +27,8 @@ Web 站点源码仓库：<https://github.com/totok22/bitfsae-nuxt>
 先把下面这些值换成你的目标环境：
 
 ```bash
-PRIMARY_DOMAIN=bitfsae.site
-ALT_DOMAIN=www.bitfsae.site
+PRIMARY_DOMAIN=bitfsae.com
+ALT_DOMAIN=www.bitfsae.com
 LETSENCRYPT_EMAIL=3226534205@qq.com
 DEPLOY_ROOT=/home/admin/fsae_project
 WEB_ROOT=/opt/bitfsae
@@ -162,8 +162,8 @@ chmod +x /home/admin/fsae_project/scripts/ssl_auto_renew.sh
 当前 compose 只需要关心 Grafana 这两项：
 
 ```yaml
-GF_SERVER_DOMAIN=bitfsae.site
-GF_SERVER_ROOT_URL=https://bitfsae.site/monitor/
+GF_SERVER_DOMAIN=bitfsae.com
+GF_SERVER_ROOT_URL=https://bitfsae.com/monitor/
 ```
 
 不改的话，Grafana 会继续跳旧域名。
@@ -187,8 +187,8 @@ docker compose ps
 
 ```bash
 sudo tee /opt/bitfsae/.env >/dev/null <<'EOF'
-DOMAIN=bitfsae.site
-ALT_DOMAIN=www.bitfsae.site
+DOMAIN=bitfsae.com
+ALT_DOMAIN=www.bitfsae.com
 LETSENCRYPT_EMAIL=3226534205@qq.com
 NUXT_INDEXNOW_SYNC_SECRET=
 NUXT_OAUTH_GITHUB_CLIENT_ID=
@@ -196,7 +196,7 @@ NUXT_OAUTH_GITHUB_CLIENT_SECRET=
 NUXT_SESSION_PASSWORD=
 STUDIO_GITHUB_CLIENT_ID=
 STUDIO_GITHUB_CLIENT_SECRET=
-STUDIO_GITHUB_REDIRECT_URL=https://bitfsae.site/__nuxt_studio/auth/github
+STUDIO_GITHUB_REDIRECT_URL=https://bitfsae.com/__nuxt_studio/auth/github
 EOF
 
 sudo chmod 600 /opt/bitfsae/.env
@@ -281,7 +281,7 @@ upstream grafana_app {
 
 server {
     listen 80;
-    server_name bitfsae.site www.bitfsae.site;
+    server_name bitfsae.com www.bitfsae.com;
 
     location ^~ /.well-known/acme-challenge/ {
         root /var/www/certbot;
@@ -296,10 +296,10 @@ server {
 
 server {
     listen 443 ssl http2;
-    server_name bitfsae.site www.bitfsae.site;
+    server_name bitfsae.com www.bitfsae.com;
 
-    ssl_certificate     /etc/nginx/ssl/bitfsae.site.pem;
-    ssl_certificate_key /etc/nginx/ssl/bitfsae.site.key;
+    ssl_certificate     /etc/nginx/ssl/bitfsae.com.pem;
+    ssl_certificate_key /etc/nginx/ssl/bitfsae.com.key;
     ssl_protocols       TLSv1.2 TLSv1.3;
     ssl_ciphers         HIGH:!aNULL:!MD5;
 
@@ -364,10 +364,10 @@ sudo systemctl reload nginx
 检查：
 
 ```bash
-dig +short bitfsae.site A
-dig +short www.bitfsae.site A
-dig +short bitfsae.site AAAA
-dig +short www.bitfsae.site AAAA
+dig +short bitfsae.com A
+dig +short www.bitfsae.com A
+dig +short bitfsae.com AAAA
+dig +short www.bitfsae.com AAAA
 ```
 
 ## 10. 补充：EdgeOne 和 GitHub CI/CD
@@ -396,7 +396,7 @@ sudo /bin/bash -lc 'set -a; . /opt/bitfsae/.env; set +a; /home/admin/fsae_projec
 成功后检查：
 
 ```bash
-sudo openssl x509 -in /etc/nginx/ssl/bitfsae.site.pem -noout -issuer -subject -dates
+sudo openssl x509 -in /etc/nginx/ssl/bitfsae.com.pem -noout -issuer -subject -dates
 ```
 
 ## 12. 安装自动续签 cron
@@ -439,12 +439,12 @@ docker compose ps
 正式切换前至少执行一次：
 
 ```bash
-curl -I http://bitfsae.site
-curl -I https://bitfsae.site
-curl -I https://bitfsae.site/monitor/
+curl -I http://bitfsae.com
+curl -I https://bitfsae.com
+curl -I https://bitfsae.com/monitor/
 pm2 ls
 docker compose ps
-sudo openssl x509 -in /etc/nginx/ssl/bitfsae.site.pem -noout -issuer -subject -dates
+sudo openssl x509 -in /etc/nginx/ssl/bitfsae.com.pem -noout -issuer -subject -dates
 ```
 
 结果应满足：

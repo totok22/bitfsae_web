@@ -51,8 +51,8 @@ systemctl status nginx --no-pager
 
 ### 现网证书路径
 
-- `/etc/nginx/ssl/bitfsae.xin.pem`
-- `/etc/nginx/ssl/bitfsae.xin.key`
+- `/etc/nginx/ssl/bitfsae.com.pem`
+- `/etc/nginx/ssl/bitfsae.com.key`
 - 当前签发方：Let's Encrypt（`issuer=CN=E7`）
 - 当前到期时间：`2026-06-05`
 
@@ -68,7 +68,7 @@ systemctl status nginx --no-pager
 示例（邮箱可放到 `/opt/bitfsae/.env` 的 `LETSENCRYPT_EMAIL`）：
 
 ```bash
-sudo LETSENCRYPT_EMAIL=ops@bitfsae.xin /home/admin/fsae_project/scripts/ssl_auto_renew.sh
+sudo LETSENCRYPT_EMAIL=ops@bitfsae.com /home/ubuntu/fsae_project/scripts/ssl_auto_renew.sh
 ```
 
 ### 定时任务

@@ -6,8 +6,8 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-DOMAIN="${DOMAIN:-bitfsae.xin}"
-ALT_DOMAIN="${ALT_DOMAIN:-www.bitfsae.xin}"
+DOMAIN="${DOMAIN:-bitfsae.com}"
+ALT_DOMAIN="${ALT_DOMAIN:-www.bitfsae.com}"
 LETSENCRYPT_EMAIL="${LETSENCRYPT_EMAIL:-}"
 
 CERTBOT_IMAGE="${CERTBOT_IMAGE:-certbot/certbot:latest}"
@@ -84,7 +84,7 @@ main() {
 
   if [[ -z "${LETSENCRYPT_EMAIL}" ]]; then
     log "Please set LETSENCRYPT_EMAIL, e.g.:"
-    log "LETSENCRYPT_EMAIL=ops@bitfsae.xin $0"
+    log "LETSENCRYPT_EMAIL=ops@bitfsae.com $0"
     exit 1
   fi
 
