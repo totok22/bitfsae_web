@@ -490,3 +490,28 @@ find . -maxdepth 3 \( -name '*.pem' -o -name '*.key' -o -name '.env' -o -name '*
 
 - `nginx_docker_old/` 是旧方案残留，不是当前现网配置
 - `www_old_backup/` 是旧静态站备份，不参与当前线上服务
+
+## 18. 备案阶段临时下线
+
+如果处于备案阶段，需要临时关闭公开网站，建议只停 Web 进程，不停遥测容器。
+
+执行下线：
+
+```bash
+cd /home/admin/fsae_project
+sudo bash scripts/site_switch.sh down
+pm2 ls
+```
+
+执行恢复：
+
+```bash
+cd /home/admin/fsae_project
+sudo bash scripts/site_switch.sh up
+pm2 ls
+```
+
+说明：
+
+- 该操作只影响 `pm2` 的 `bitfsae` Web 进程。
+- `docker compose` 的 `mosquitto`、`influxdb`、`telegraf`、`grafana` 不会被停止。

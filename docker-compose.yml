@@ -26,7 +26,7 @@ services:
 
   # 3. Telegraf
   telegraf:
-    image: telegraf
+    image: telegraf:1.38.2
     container_name: fsae_telegraf
     volumes:
       # 配置文件挂载
