@@ -65,18 +65,4 @@ message TelemetryFrame {
     
     // --- 6. BMS 详细数据
     repeated BatteryModule modules = 15;
-
-    // --- 7. 电池包摘要（带宽受限，仅保留上云必需量）
-    uint32 battery_soc = 16;
-    uint32 max_cell_voltage = 17;
-    uint32 min_cell_voltage = 18;
-    uint32 max_cell_voltage_no = 19;
-    uint32 min_cell_voltage_no = 20;
-    sint32 max_temp = 21;
-    sint32 min_temp = 22;
-    uint32 max_temp_no = 23;
-    uint32 min_temp_no = 24;
-
-    // --- 8. 简化故障字
-    uint32 battery_fault_code = 25;
 }
