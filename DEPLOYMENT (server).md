@@ -374,6 +374,12 @@ server {
 }
 ```
 
+> 说明（当前线上推荐）：
+>
+> - 如果 `www.bitfsae.com` 走 EdgeOne，且 EdgeOne 到源站回源协议是 `http`，则源站只需要保证 `www` 在 `80` 可访问。
+> - 同时，`bitfsae.com`（裸域）不接 EdgeOne 时，源站必须开放 `443` 并在 Nginx 提供 TLS，然后把 `https://bitfsae.com/*` 也 `301` 到 `https://www.bitfsae.com/*`。
+> - 否则浏览器访问 `https://bitfsae.com` 会出现握手失败（例如 `PR_END_OF_FILE_ERROR`）。
+
 启用并检查：
 
 ```bash
@@ -391,10 +397,14 @@ curl -I https://www.bitfsae.com
 
 ## 9. 处理 DNS
 
-至少保证：
+至少保证（二选一）：
 
-- `A @ -> 新服务器 IPv4`
-- `A www -> 新服务器 IPv4`
+- 方案 A（两域名都直连源站）
+    - `A @ -> 新服务器 IPv4`
+    - `A www -> 新服务器 IPv4`
+- 方案 B（当前线上：`www` 走 EdgeOne，裸域直连源站）
+    - `A @ -> 新服务器 IPv4`
+    - `www` 按 EdgeOne 接入要求配置（通常是 CNAME 到 EdgeOne 分配的接入地址）
 
 如果要配 IPv6，再加：
 
@@ -415,6 +425,10 @@ dig +short www.bitfsae.com AAAA
 ## 10. 补充：EdgeOne 和 GitHub CI/CD
 
 - 如果域名接入腾讯云 EdgeOne，先确保源站 Nginx、证书和回源都正常，再开启代理、缓存或规则；`/.well-known/acme-challenge/` 不要被缓存、改写或拦截
+- 如果只有 `www.bitfsae.com` 接入 EdgeOne，而 `bitfsae.com` 无法接入：
+    - 裸域 `bitfsae.com` 仍需直连源站并开启 `443/TCP`（IPv4）
+    - 裸域在源站统一 `301` 到 `https://www.bitfsae.com$request_uri`
+    - 安全组和网络 ACL 必须放行 `0.0.0.0/0 -> TCP/443`（至少在切流与验证阶段）
 - Nuxt 网站如果通过 GitHub CI/CD 部署，迁移域名时要同步检查构建环境变量、部署目标机器、回调地址和 `NUXT_PUBLIC_SITE_URL`，避免 CI 仍把产物发到旧环境或带着旧域名配置
 
 ## 11. 首次申请证书
