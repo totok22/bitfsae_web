@@ -2,6 +2,13 @@
 
 本仓库用于维护 BITFSAE 线上环境相关的遥测链路、监控服务、证书续签脚本、服务器部署说明，以及 protobuf 协议与常用运维配置。
 
+## 当前线上状态（2026-04）
+
+- 站点主域名已迁移并稳定运行在 `bitfsae.com`（含 `www.bitfsae.com`）。
+- `.com` 域名 ICP 备案已完成。
+- 公网安备正在办理中。
+- 线上 Web 进程由宿主机 `pm2` 托管，容器仅承担遥测与监控链路。
+
 相关 Web/Nuxt 项目仓库：
 
 - 公开仓库：`https://github.com/totok22/BITFSAE-team-portal`
@@ -27,9 +34,9 @@
 - `scripts/ssl_auto_renew.sh`: Let's Encrypt 自动申请/续签脚本（当前已适配宿主机 Nginx）。
 - `DEPLOYMENT (server).md`: 当前线上架构对应的新服务器部署与域名迁移手册。
 
-## 新服务器部署
+## 新服务器部署与复建
 
-如果要把系统迁到一台全新服务器，或更换到新的域名后缀，例如 `.site`，请参考 `DEPLOYMENT (server).md`。
+如需在全新服务器复建当前环境，或后续再次迁移域名，请参考 `DEPLOYMENT (server).md`。
 
 ## 日常运维命令
 

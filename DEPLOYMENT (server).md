@@ -281,7 +281,7 @@ upstream grafana_app {
 
 server {
     listen 80;
-    server_name bitfsae.com www.bitfsae.com;
+    server_name bitfsae.com;
 
     location ^~ /.well-known/acme-challenge/ {
         root /var/www/certbot;
@@ -290,13 +290,48 @@ server {
     }
 
     location / {
-        return 301 https://$server_name$request_uri;
+        return 301 https://www.bitfsae.com$request_uri;
+    }
+}
+
+server {
+    listen 80;
+    server_name www.bitfsae.com;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type "text/plain";
+        try_files $uri =404;
+    }
+
+    location / {
+        return 301 https://www.bitfsae.com$request_uri;
     }
 }
 
 server {
     listen 443 ssl http2;
-    server_name bitfsae.com www.bitfsae.com;
+    server_name bitfsae.com;
+
+    ssl_certificate     /etc/nginx/ssl/bitfsae.com.pem;
+    ssl_certificate_key /etc/nginx/ssl/bitfsae.com.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type "text/plain";
+        try_files $uri =404;
+    }
+
+    location / {
+        return 301 https://www.bitfsae.com$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name www.bitfsae.com;
 
     ssl_certificate     /etc/nginx/ssl/bitfsae.com.pem;
     ssl_certificate_key /etc/nginx/ssl/bitfsae.com.key;
@@ -345,6 +380,13 @@ server {
 sudo ln -sf /etc/nginx/sites-available/bitfsae /etc/nginx/sites-enabled/bitfsae
 sudo nginx -t
 sudo systemctl reload nginx
+
+# 验证 bitfsae.com 会 301 到 https://www.bitfsae.com
+curl -I http://bitfsae.com
+curl -I https://bitfsae.com
+
+# 验证主站可访问
+curl -I https://www.bitfsae.com
 ```
 
 ## 9. 处理 DNS
